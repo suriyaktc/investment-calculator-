@@ -1,0 +1,2 @@
+# Fundament uses Python stdlib only — no external packages needed!
+# This file exists so Render recognizes it as a Python project.

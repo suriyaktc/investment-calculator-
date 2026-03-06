@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: fundament
+    runtime: python
+    buildCommand: echo "No build needed"
+    startCommand: python server.py
+    envVars:
+      - key: PORT
+        generateValue: false
+        value: 10000

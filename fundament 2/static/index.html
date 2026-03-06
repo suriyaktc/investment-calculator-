@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fundament — Investor Education Platform</title>
+<meta name="description" content="Free, interactive mutual fund education tools. Calculate SIP, lump sum, compare funds, learn concepts. No sales pitch.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Mono:wght@300;400;500&family=Literata:ital,opsz,wght@0,7..72,300;0,7..72,400;1,7..72,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+/* ─────── RESET & VARS ─────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #0d0d0d;
+  --paper: #f5f0e8;
+  --amber: #e8a020;
+  --amber-light: #f5d080;
+  --teal: #1a7a6e;
+  --rust: #c04830;
+  --mist: #ece7dd;
+  --white: #ffffff;
+  --shadow-sm: 0 2px 12px rgba(13,13,13,0.08);
+  --shadow-md: 0 8px 32px rgba(13,13,13,0.12);
+  --serif: 'Playfair Display', Georgia, serif;
+  --mono: 'DM Mono', 'Courier New', monospace;
+  --body: 'Literata', Georgia, serif;
+  --radius: 2px;
+  --transition: 0.2s ease;
+}
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  line-height: 1.7;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─────── LOADER ─────── */
+#app-loader {
+  position: fixed; inset: 0;
+  background: var(--ink);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.5s, visibility 0.5s;
+}
+#app-loader.hidden { opacity: 0; visibility: hidden; }
+.loader-logo { font-family: var(--serif); font-size: 2.5rem; font-weight: 900; color: var(--paper); letter-spacing: -0.03em; margin-bottom: 1.5rem; }
+.loader-logo span { color: var(--amber); }
+.loader-bar { width: 200px; height: 2px; background: rgba(245,240,232,0.1); border-radius: 1px; overflow: hidden; }
+.loader-progress { height: 100%; background: var(--amber); width: 0%; transition: width 0.8s ease; border-radius: 1px; }
+.loader-status { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(245,240,232,0.4); margin-top: 1rem; }
+
+/* ─────── HEADER ─────── */
+header {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0 clamp(1rem, 4vw, 3rem);
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 2px solid var(--amber);
+}
+.logo { font-family: var(--serif); font-size: 1.5rem; font-weight: 900; letter-spacing: -0.02em; }
+.logo span { color: var(--amber); }
+.header-tag { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(245,240,232,0.35); }
+.server-status { display: flex; align-items: center; gap: 0.5rem; font-family: var(--mono); font-size: 0.62rem; color: rgba(245,240,232,0.35); }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: #666; transition: background 0.3s; }
+.status-dot.online { background: #4caf50; box-shadow: 0 0 6px rgba(76,175,80,0.6); }
+.status-dot.error { background: var(--rust); }
+
+/* ─────── HERO ─────── */
+.hero {
+  background: var(--ink); color: var(--paper);
+  padding: clamp(2.5rem, 6vw, 5rem) clamp(1rem, 4vw, 3rem);
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -30%; right: -5%;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(232,160,32,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-eyebrow {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.25em;
+  text-transform: uppercase; color: var(--amber); margin-bottom: 0.85rem;
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.hero-eyebrow::before { content: ''; display: block; width: 20px; height: 1px; background: var(--amber); }
+.hero h1 {
+  font-family: var(--serif); font-size: clamp(2rem, 4.5vw, 3.5rem);
+  font-weight: 900; line-height: 1.05; letter-spacing: -0.03em; margin-bottom: 1.25rem;
+}
+.hero h1 em { font-style: italic; color: var(--amber); }
+.hero-sub { color: rgba(245,240,232,0.55); font-size: 1rem; line-height: 1.65; max-width: 40ch; }
+.hero-visual { position: relative; height: 260px; }
+.hero-chart-svg { width: 100%; height: 100%; }
+.hero-path {
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  animation: drawPath 2.5s ease-out forwards 0.8s;
+}
+@keyframes drawPath { to { stroke-dashoffset: 0; } }
+
+/* ─────── TABS ─────── */
+.tabs-nav {
+  background: var(--mist); border-bottom: 1px solid rgba(13,13,13,0.08);
+  padding: 0 clamp(1rem, 4vw, 3rem);
+  display: flex; overflow-x: auto; scrollbar-width: none;
+}
+.tabs-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em;
+  text-transform: uppercase; padding: 1rem 1.25rem;
+  border: none; background: transparent; cursor: pointer;
+  color: rgba(13,13,13,0.4); border-bottom: 2px solid transparent;
+  white-space: nowrap; transition: all var(--transition);
+  position: relative; top: 1px;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--amber); font-weight: 500; }
+
+/* ─────── SECTIONS ─────── */
+.section { display: none; padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 3rem); animation: fadeUp 0.35s ease-out; }
+.section.active { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+.section-head { margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 1px solid rgba(13,13,13,0.1); }
+.section-label { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--amber); margin-bottom: 0.4rem; }
+.section-title { font-family: var(--serif); font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 0.4rem; }
+.section-desc { font-style: italic; font-size: 0.88rem; color: rgba(13,13,13,0.5); }
+
+/* ─────── LAYOUT GRIDS ─────── */
+.calc-layout { display: grid; grid-template-columns: 360px 1fr; gap: 1.5rem; align-items: start; }
+@media (max-width: 880px) { .calc-layout { grid-template-columns: 1fr; } .hero { grid-template-columns: 1fr; } .hero-visual { display: none; } }
+
+/* ─────── INPUTS PANEL ─────── */
+.inputs-panel {
+  background: var(--ink); color: var(--paper);
+  padding: 1.75rem; border-radius: var(--radius);
+  position: relative; overflow: hidden;
+}
+.inputs-panel::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--amber), var(--amber-light)); }
+
+.input-group { margin-bottom: 1.6rem; }
+.input-label {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.15em;
+  text-transform: uppercase; color: rgba(245,240,232,0.45);
+  margin-bottom: 0.45rem; display: flex; justify-content: space-between; align-items: center;
+}
+.input-val { color: var(--amber); font-size: 0.82rem; font-weight: 500; }
+
+input[type="range"] {
+  width: 100%; -webkit-appearance: none; appearance: none;
+  height: 2px; background: rgba(245,240,232,0.12); border-radius: 1px; cursor: pointer; outline: none;
+}
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; background: var(--amber); border-radius: 50%; box-shadow: 0 0 0 3px rgba(232,160,32,0.22); }
+input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; background: var(--amber); border-radius: 50%; border: none; }
+
+.range-bounds { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.58rem; color: rgba(245,240,232,0.22); margin-top: 0.2rem; }
+
+.toggle-group { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.toggle-btn {
+  font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.06em;
+  padding: 0.35rem 0.75rem; border: 1px solid rgba(245,240,232,0.12);
+  background: transparent; color: rgba(245,240,232,0.45); cursor: pointer;
+  border-radius: var(--radius); transition: all var(--transition);
+}
+.toggle-btn.active { background: var(--amber); color: var(--ink); border-color: var(--amber); font-weight: 500; }
+.toggle-btn:hover:not(.active) { border-color: rgba(245,240,232,0.3); color: rgba(245,240,232,0.7); }
+
+select.input-select {
+  width: 100%; font-family: var(--mono); font-size: 0.78rem;
+  padding: 0.5rem 0.75rem; background: rgba(245,240,232,0.06);
+  border: 1px solid rgba(245,240,232,0.12); color: var(--paper);
+  cursor: pointer; outline: none; border-radius: var(--radius);
+  transition: border-color var(--transition);
+}
+select.input-select:focus { border-color: var(--amber); }
+select.input-select option { background: #1a1a1a; color: var(--paper); }
+
+/* ─────── RESULTS PANEL ─────── */
+.results-stack { display: flex; flex-direction: column; gap: 1.25rem; }
+
+/* ─────── STAT CARDS ─────── */
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem; }
+@media (max-width: 600px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+
+.stat-card {
+  background: var(--white); border: 1px solid rgba(13,13,13,0.07);
+  padding: 1.1rem; position: relative; overflow: hidden;
+  transition: box-shadow var(--transition);
+}
+.stat-card:hover { box-shadow: var(--shadow-sm); }
+.stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
+.stat-card.amber::after { background: var(--amber); }
+.stat-card.teal::after { background: var(--teal); }
+.stat-card.rust::after { background: var(--rust); }
+
+.stat-label { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(13,13,13,0.38); margin-bottom: 0.4rem; }
+.stat-val { font-family: var(--serif); font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 0.2rem; transition: all 0.3s; }
+.stat-card.amber .stat-val { color: var(--amber); }
+.stat-card.teal .stat-val { color: var(--teal); }
+.stat-card.rust .stat-val { color: var(--rust); }
+.stat-sub { font-size: 0.68rem; color: rgba(13,13,13,0.38); font-family: var(--mono); }
+
+/* ─────── CHART BOX ─────── */
+.chart-box {
+  background: var(--white); border: 1px solid rgba(13,13,13,0.07);
+  padding: 1.5rem;
+}
+.chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem; }
+.chart-title-text { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(13,13,13,0.38); }
+.chart-legend { display: flex; gap: 1rem; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 0.35rem; font-family: var(--mono); font-size: 0.6rem; color: rgba(13,13,13,0.5); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ─────── INSIGHT BOX ─────── */
+.insight-box {
+  background: var(--ink); color: var(--paper);
+  padding: 1.25rem 1.5rem; border-left: 3px solid var(--amber);
+  display: flex; gap: 0.85rem; align-items: flex-start;
+}
+.insight-icon { font-size: 1rem; flex-shrink: 0; margin-top: 0.2rem; }
+.insight-text { font-size: 0.85rem; line-height: 1.65; color: rgba(245,240,232,0.75); }
+.insight-text strong { color: var(--amber-light); font-weight: 400; font-style: italic; }
+
+/* ─────── TABLE ─────── */
+.data-table-wrap { background: var(--white); border: 1px solid rgba(13,13,13,0.07); overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(13,13,13,0.38); padding: 0.75rem; text-align: left; border-bottom: 1px solid rgba(13,13,13,0.07); white-space: nowrap; }
+td { font-family: var(--mono); font-size: 0.75rem; padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(13,13,13,0.04); color: rgba(13,13,13,0.7); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(13,13,13,0.02); }
+.td-gain { color: var(--teal); font-weight: 500; }
+.td-total { color: var(--ink); font-weight: 500; }
+.td-real { color: var(--rust); }
+
+/* ─────── FUND COMPARE ─────── */
+.compare-selects { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.compare-select-wrap { display: flex; flex-direction: column; gap: 0.4rem; }
+.compare-select-wrap label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(13,13,13,0.4); }
+select.compare-sel {
+  font-family: var(--mono); font-size: 0.78rem; padding: 0.55rem 0.9rem;
+  border: 1.5px solid rgba(13,13,13,0.12); background: var(--white);
+  cursor: pointer; outline: none; border-radius: var(--radius);
+  color: var(--ink); transition: border-color var(--transition);
+  min-width: 200px;
+}
+select.compare-sel:focus { border-color: var(--amber); }
+
+.compare-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; }
+@media (max-width: 700px) { .compare-panels { grid-template-columns: 1fr; } }
+
+.fund-panel { background: var(--white); border: 1px solid rgba(13,13,13,0.07); padding: 1.4rem; }
+.fund-panel-head { display: flex; align-items: center; gap: 0.65rem; margin-bottom: 1rem; padding-bottom: 0.85rem; border-bottom: 1px solid rgba(13,13,13,0.07); }
+.fund-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.fund-panel-name { font-family: var(--serif); font-size: 1rem; font-weight: 700; }
+.fund-panel-type { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(13,13,13,0.38); margin-top: 0.1rem; }
+.fund-desc { font-size: 0.82rem; color: rgba(13,13,13,0.58); line-height: 1.55; margin-bottom: 1rem; }
+
+.fund-metric { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(13,13,13,0.04); }
+.fund-metric:last-child { border-bottom: none; }
+.metric-k { font-family: var(--mono); font-size: 0.65rem; color: rgba(13,13,13,0.42); }
+.metric-v { font-family: var(--mono); font-size: 0.72rem; text-align: right; }
+.v-good { color: var(--teal); }
+.v-warn { color: var(--rust); }
+.v-neutral { color: var(--ink); }
+
+.risk-bar { display: flex; gap: 2px; margin-top: 3px; }
+.risk-pip { width: 11px; height: 3px; border-radius: 1px; }
+
+.fund-ideal { margin-top: 0.85rem; padding: 0.6rem 0.85rem; background: var(--mist); font-family: var(--mono); font-size: 0.7rem; color: var(--teal); border-left: 2px solid var(--teal); line-height: 1.5; }
+
+/* ─────── GOAL PLANNER ─────── */
+.goal-output { background: var(--ink); color: var(--paper); padding: 1.75rem; margin-top: 0; }
+.goal-output-title { font-family: var(--serif); font-size: 1.2rem; font-weight: 700; color: var(--amber); margin-bottom: 1.25rem; }
+.goal-row { display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0; border-bottom: 1px solid rgba(245,240,232,0.06); font-family: var(--mono); font-size: 0.78rem; }
+.goal-row:last-child { border-bottom: none; }
+.goal-key { color: rgba(245,240,232,0.4); }
+.goal-val { color: var(--amber-light); font-weight: 500; font-size: 0.88rem; }
+
+/* ─────── CONCEPTS ─────── */
+.concepts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1.1rem; }
+.concept-card {
+  background: var(--white); border: 1px solid rgba(13,13,13,0.08);
+  padding: 1.4rem; position: relative; overflow: hidden;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.concept-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.concept-card::before {
+  content: attr(data-n); position: absolute; top: -0.6rem; right: 0.65rem;
+  font-family: var(--serif); font-size: 3.5rem; font-weight: 900;
+  color: rgba(13,13,13,0.04); line-height: 1; pointer-events: none;
+}
+.concept-tag { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber); margin-bottom: 0.5rem; }
+.concept-title { font-family: var(--serif); font-size: 1.15rem; font-weight: 700; margin-bottom: 0.65rem; }
+.concept-body { font-size: 0.83rem; line-height: 1.65; color: rgba(13,13,13,0.6); }
+.concept-eg { margin-top: 0.85rem; padding: 0.55rem 0.75rem; background: var(--mist); font-family: var(--mono); font-size: 0.7rem; color: var(--teal); border-left: 2px solid var(--teal); line-height: 1.5; }
+
+/* ─────── QUIZ ─────── */
+.quiz-wrap { max-width: 680px; margin: 0 auto; }
+.quiz-progress { display: flex; gap: 0.3rem; margin-bottom: 1.75rem; }
+.q-pip { height: 3px; flex: 1; background: rgba(13,13,13,0.1); border-radius: 2px; transition: background 0.3s; }
+.q-pip.done { background: var(--amber); }
+.q-pip.current { background: var(--amber); opacity: 0.4; }
+
+.quiz-card { background: var(--white); border: 1px solid rgba(13,13,13,0.08); padding: 1.75rem; margin-bottom: 1rem; }
+.quiz-q { font-family: var(--serif); font-size: 1.35rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.5rem; }
+.quiz-ctx { font-size: 0.82rem; color: rgba(13,13,13,0.45); font-style: italic; margin-bottom: 1.5rem; }
+
+.quiz-opts { display: grid; gap: 0.6rem; }
+.quiz-opt {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.85rem 1rem; border: 1.5px solid rgba(13,13,13,0.1);
+  background: transparent; text-align: left; cursor: pointer;
+  font-family: var(--body); font-size: 0.88rem; line-height: 1.4;
+  border-radius: var(--radius); transition: all var(--transition); width: 100%;
+}
+.quiz-opt:hover:not(:disabled) { border-color: var(--amber); background: rgba(232,160,32,0.04); }
+.quiz-opt.correct { border-color: var(--teal); background: rgba(26,122,110,0.06); color: var(--teal); }
+.quiz-opt.wrong { border-color: var(--rust); background: rgba(192,72,48,0.05); color: var(--rust); text-decoration: line-through; opacity: 0.7; }
+.opt-badge {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(13,13,13,0.06); display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 0.65rem; font-weight: 500; flex-shrink: 0;
+}
+.quiz-opt.correct .opt-badge { background: var(--teal); color: white; }
+.quiz-opt.wrong .opt-badge { background: var(--rust); color: white; }
+
+.quiz-explain { background: var(--ink); color: var(--paper); padding: 1.1rem 1.35rem; border-left: 3px solid var(--amber); font-size: 0.85rem; line-height: 1.65; display: none; margin-bottom: 1rem; }
+.quiz-explain.show { display: block; }
+
+.quiz-btn {
+  font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 0.85rem 1.75rem; background: var(--amber); color: var(--ink);
+  border: none; cursor: pointer; font-weight: 500; transition: all var(--transition); display: none;
+}
+.quiz-btn.show { display: inline-block; }
+.quiz-btn:hover { background: var(--amber-light); }
+
+.quiz-result { text-align: center; padding: 3rem 1rem; display: none; }
+.quiz-result.show { display: block; }
+.result-score { font-family: var(--serif); font-size: 5rem; font-weight: 900; color: var(--amber); line-height: 1; }
+.result-of { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(13,13,13,0.38); margin: 0.5rem 0 1rem; }
+.result-msg { font-family: var(--serif); font-size: 1.3rem; font-weight: 700; font-style: italic; margin-bottom: 2rem; }
+.result-detail { margin-bottom: 2rem; }
+.result-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.85rem; background: var(--white); border: 1px solid rgba(13,13,13,0.07); margin-bottom: 0.4rem; font-family: var(--mono); font-size: 0.75rem; }
+.row-correct { color: var(--teal); }
+.row-wrong { color: var(--rust); }
+.retry-btn { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; padding: 0.8rem 1.75rem; background: transparent; border: 1.5px solid var(--ink); cursor: pointer; transition: all var(--transition); }
+.retry-btn:hover { background: var(--ink); color: var(--paper); }
+
+/* ─────── SCENARIO COMPARE ─────── */
+.scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+@media (max-width: 700px) { .scenario-grid { grid-template-columns: 1fr; } }
+.scenario-card { background: var(--white); border: 1px solid rgba(13,13,13,0.08); padding: 1.25rem; }
+.sc-label { font-family: var(--serif); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.85rem; padding-bottom: 0.6rem; border-bottom: 2px solid var(--amber); }
+
+/* ─────── FOOTER ─────── */
+footer {
+  background: var(--mist); border-top: 1px solid rgba(13,13,13,0.08);
+  padding: 1.25rem clamp(1rem, 4vw, 3rem); display: flex; gap: 1rem; align-items: flex-start;
+}
+.disclaimer { font-family: var(--mono); font-size: 0.6rem; line-height: 1.75; color: rgba(13,13,13,0.38); }
+.disclaimer strong { color: rgba(13,13,13,0.55); }
+.disc-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 0.1rem; color: rgba(13,13,13,0.25); }
+
+/* ─────── LOADING SKELETON ─────── */
+.skeleton { background: linear-gradient(90deg, rgba(13,13,13,0.06) 25%, rgba(13,13,13,0.1) 50%, rgba(13,13,13,0.06) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: var(--radius); }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ─────── API STATUS BANNER ─────── */
+.api-banner { background: var(--rust); color: white; padding: 0.6rem 1.5rem; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; display: none; text-align: center; }
+.api-banner.show { display: block; }
+
+/* ─────── UTILITIES ─────── */
+.mt-1 { margin-top: 0.5rem; } .mt-2 { margin-top: 1rem; }
+.number-animate { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="app-loader">
+  <div class="loader-logo">Fund<span>ament</span></div>
+  <div class="loader-bar"><div class="loader-progress" id="loader-bar"></div></div>
+  <div class="loader-status" id="loader-status">Connecting to server...</div>
+</div>
+
+<!-- API STATUS BANNER -->
+<div class="api-banner" id="api-banner">
+  ⚠ Server offline — using local calculations. Start server.py for full features.
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Fund<span>ament</span></div>
+  <div class="header-tag">Investor Education & Awareness</div>
+  <div class="server-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">connecting</span>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="hero-eyebrow">Your money, demystified</div>
+    <h1>Understand<br><em>how wealth</em><br>actually grows.</h1>
+    <p class="hero-sub">Free, interactive tools to grasp mutual fund concepts — compounding, SIPs, risk, tax. No jargon. No sales pitch. Ever.</p>
+  </div>
+  <div class="hero-visual">
+    <svg class="hero-chart-svg" viewBox="0 0 500 260" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="heroGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#e8a020" stop-opacity="0.2"/>
+          <stop offset="100%" stop-color="#e8a020" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path fill="url(#heroGrad)" d="M0 245 C70 235 130 200 175 168 C215 140 235 108 272 78 C308 50 345 36 385 22 C420 10 460 8 500 6 L500 260 Z"/>
+      <path class="hero-path" fill="none" stroke="#e8a020" stroke-width="2.5" d="M0 245 C70 235 130 200 175 168 C215 140 235 108 272 78 C308 50 345 36 385 22 C420 10 460 8 500 6"/>
+      <path fill="none" stroke="rgba(245,240,232,0.18)" stroke-width="1.5" stroke-dasharray="5,4" d="M0 245 L500 120"/>
+      <text x="390" y="16" fill="#e8a020" font-family="DM Mono,monospace" font-size="8" letter-spacing="1">WITH COMPOUNDING</text>
+      <text x="360" y="114" fill="rgba(245,240,232,0.25)" font-family="DM Mono,monospace" font-size="8">SIMPLE GROWTH</text>
+    </svg>
+  </div>
+</section>
+
+<!-- TABS -->
+<nav class="tabs-nav">
+  <button class="tab-btn active" data-tab="sip">01 — SIP</button>
+  <button class="tab-btn" data-tab="lumpsum">02 — Lump Sum</button>
+  <button class="tab-btn" data-tab="goal">03 — Goal Planner</button>
+  <button class="tab-btn" data-tab="compare">04 — Compare Funds</button>
+  <button class="tab-btn" data-tab="scenarios">05 — Scenarios</button>
+  <button class="tab-btn" data-tab="concepts">06 — Concepts</button>
+  <button class="tab-btn" data-tab="quiz">07 — Quiz</button>
+</nav>
+
+<!-- ═══ TAB: SIP ═══ -->
+<section class="section active" id="tab-sip">
+  <div class="section-head">
+    <div class="section-label">Tool 01</div>
+    <h2 class="section-title">SIP Calculator</h2>
+    <p class="section-desc">Systematic Investment Plan — fixed monthly investment. See how small, regular contributions build significant wealth.</p>
+  </div>
+  <div class="calc-layout">
+    <div class="inputs-panel">
+      <div class="input-group">
+        <div class="input-label">Monthly Investment <span class="input-val" id="sip-amt-lbl">₹5,000</span></div>
+        <input type="range" id="sip-amt" min="500" max="100000" step="500" value="5000">
+        <div class="range-bounds"><span>₹500</span><span>₹1 Lakh</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Expected Annual Return <span class="input-val" id="sip-rate-lbl">12%</span></div>
+        <input type="range" id="sip-rate" min="4" max="25" step="0.5" value="12">
+        <div class="range-bounds"><span>4%</span><span>25%</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Duration <span class="input-val" id="sip-yrs-lbl">15 years</span></div>
+        <input type="range" id="sip-yrs" min="1" max="40" step="1" value="15">
+        <div class="range-bounds"><span>1 yr</span><span>40 yrs</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Inflation Rate <span class="input-val" id="sip-inf-lbl">6%</span></div>
+        <input type="range" id="sip-inf" min="2" max="10" step="0.5" value="6">
+        <div class="range-bounds"><span>2%</span><span>10%</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="margin-bottom:0.55rem">Annual Step-Up</div>
+        <div class="toggle-group" id="sip-stepup-grp">
+          <button class="toggle-btn" data-val="0">No step-up</button>
+          <button class="toggle-btn active" data-val="5">+5%/yr</button>
+          <button class="toggle-btn" data-val="10">+10%/yr</button>
+          <button class="toggle-btn" data-val="15">+15%/yr</button>
+        </div>
+      </div>
+    </div>
+    <div class="results-stack">
+      <div class="stats-row">
+        <div class="stat-card amber"><div class="stat-label">Corpus Value</div><div class="stat-val" id="sip-corpus">—</div><div class="stat-sub">at maturity</div></div>
+        <div class="stat-card teal"><div class="stat-label">Total Gains</div><div class="stat-val" id="sip-gains">—</div><div class="stat-sub" id="sip-gain-pct">—</div></div>
+        <div class="stat-card rust"><div class="stat-label">Real Value</div><div class="stat-val" id="sip-real">—</div><div class="stat-sub">inflation-adjusted</div></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-header">
+          <span class="chart-title-text">Growth Over Time</span>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#e8a020"></div>Value</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#c04830;opacity:0.7"></div>Invested</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#1a7a6e"></div>Real</div>
+          </div>
+        </div>
+        <canvas id="sipChart" height="190"></canvas>
+      </div>
+      <div class="insight-box">
+        <div class="insight-icon">💡</div>
+        <div class="insight-text" id="sip-insight">Adjust sliders to see projections.</div>
+      </div>
+      <div class="data-table-wrap">
+        <div style="padding:0.85rem 0.85rem 0.5rem;font-family:var(--mono);font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(13,13,13,0.38)">Year-by-Year Snapshot</div>
+        <table><thead><tr><th>Year</th><th>Invested</th><th>Value</th><th>Gains</th><th>Real Value</th></tr></thead>
+        <tbody id="sip-table"></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TAB: LUMP SUM ═══ -->
+<section class="section" id="tab-lumpsum">
+  <div class="section-head">
+    <div class="section-label">Tool 02</div>
+    <h2 class="section-title">Lump Sum Calculator</h2>
+    <p class="section-desc">One-time investment. Watch compounding compound its magic. Compare with simple interest to see the true difference.</p>
+  </div>
+  <div class="calc-layout">
+    <div class="inputs-panel">
+      <div class="input-group">
+        <div class="input-label">Principal Amount <span class="input-val" id="ls-amt-lbl">₹1,00,000</span></div>
+        <input type="range" id="ls-amt" min="10000" max="5000000" step="10000" value="100000">
+        <div class="range-bounds"><span>₹10K</span><span>₹50L</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Annual Return Rate <span class="input-val" id="ls-rate-lbl">12%</span></div>
+        <input type="range" id="ls-rate" min="4" max="25" step="0.5" value="12">
+        <div class="range-bounds"><span>4%</span><span>25%</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Time Horizon <span class="input-val" id="ls-yrs-lbl">10 years</span></div>
+        <input type="range" id="ls-yrs" min="1" max="40" step="1" value="10">
+        <div class="range-bounds"><span>1 yr</span><span>40 yrs</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label" style="margin-bottom:0.55rem">Compounding Frequency</div>
+        <div class="toggle-group" id="ls-freq-grp">
+          <button class="toggle-btn" data-val="1">Annual</button>
+          <button class="toggle-btn" data-val="2">Semi</button>
+          <button class="toggle-btn active" data-val="4">Quarterly</button>
+          <button class="toggle-btn" data-val="12">Monthly</button>
+        </div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Inflation Rate <span class="input-val" id="ls-inf-lbl">6%</span></div>
+        <input type="range" id="ls-inf" min="2" max="10" step="0.5" value="6">
+        <div class="range-bounds"><span>2%</span><span>10%</span></div>
+      </div>
+    </div>
+    <div class="results-stack">
+      <div class="stats-row">
+        <div class="stat-card amber"><div class="stat-label">Compound Value</div><div class="stat-val" id="ls-corpus">—</div><div class="stat-sub" id="ls-mult">—</div></div>
+        <div class="stat-card teal"><div class="stat-label">Simple Interest</div><div class="stat-val" id="ls-simple">—</div><div class="stat-sub">for comparison</div></div>
+        <div class="stat-card rust"><div class="stat-label">Compounding Bonus</div><div class="stat-val" id="ls-bonus">—</div><div class="stat-sub">extra over simple</div></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-header">
+          <span class="chart-title-text">Compound vs Simple vs Real</span>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#e8a020"></div>Compound</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#c04830;opacity:0.7"></div>Simple</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#1a7a6e"></div>Real</div>
+          </div>
+        </div>
+        <canvas id="lsChart" height="190"></canvas>
+      </div>
+      <div class="insight-box">
+        <div class="insight-icon">💡</div>
+        <div class="insight-text" id="ls-insight">Adjust to see the power of compounding.</div>
+      </div>
+      <div class="chart-box">
+        <div style="font-family:var(--mono);font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;color:rgba(13,13,13,0.38);margin-bottom:0.85rem">Rule of 72</div>
+        <div style="font-family:var(--mono);font-size:0.82rem;line-height:2.1;color:rgba(13,13,13,0.65)">
+          At <strong id="r72-rate" style="color:var(--amber)">12%</strong>, money doubles every <strong id="r72-years" style="color:var(--amber)">6 yrs</strong>.<br>
+          In <strong id="r72-horizon" style="color:var(--teal)">10 yrs</strong> → doubles approximately <strong id="r72-doubles" style="color:var(--teal)">1.7×</strong>.<br>
+          <span style="color:rgba(13,13,13,0.35);font-size:0.68rem">Formula: 72 ÷ annual return rate = doubling years</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TAB: GOAL PLANNER ═══ -->
+<section class="section" id="tab-goal">
+  <div class="section-head">
+    <div class="section-label">Tool 03</div>
+    <h2 class="section-title">Goal Planner</h2>
+    <p class="section-desc">Work backwards from your target. How much do you need to invest today to reach your financial goal?</p>
+  </div>
+  <div class="calc-layout">
+    <div class="inputs-panel">
+      <div class="input-group">
+        <div class="input-label">Target Amount <span class="input-val" id="goal-target-lbl">₹50,00,000</span></div>
+        <input type="range" id="goal-target" min="100000" max="50000000" step="100000" value="5000000">
+        <div class="range-bounds"><span>₹1L</span><span>₹5 Cr</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Time to Goal <span class="input-val" id="goal-yrs-lbl">15 years</span></div>
+        <input type="range" id="goal-yrs" min="1" max="40" step="1" value="15">
+        <div class="range-bounds"><span>1 yr</span><span>40 yrs</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Expected Return <span class="input-val" id="goal-rate-lbl">12%</span></div>
+        <input type="range" id="goal-rate" min="4" max="25" step="0.5" value="12">
+        <div class="range-bounds"><span>4%</span><span>25%</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Inflation Rate <span class="input-val" id="goal-inf-lbl">6%</span></div>
+        <input type="range" id="goal-inf" min="2" max="10" step="0.5" value="6">
+        <div class="range-bounds"><span>2%</span><span>10%</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Existing Savings <span class="input-val" id="goal-existing-lbl">₹0</span></div>
+        <input type="range" id="goal-existing" min="0" max="2000000" step="10000" value="0">
+        <div class="range-bounds"><span>₹0</span><span>₹20L</span></div>
+      </div>
+      <div class="input-group" style="margin-bottom:0">
+        <div class="input-label" style="margin-bottom:0.5rem">Goal Type</div>
+        <div class="toggle-group" id="goal-type-grp">
+          <button class="toggle-btn active" data-val="retirement">Retirement</button>
+          <button class="toggle-btn" data-val="home">Home</button>
+          <button class="toggle-btn" data-val="education">Education</button>
+          <button class="toggle-btn" data-val="custom">Custom</button>
+        </div>
+      </div>
+    </div>
+    <div class="results-stack">
+      <div class="goal-output">
+        <div class="goal-output-title" id="goal-title-display">Retirement Goal</div>
+        <div class="goal-row"><span class="goal-key">Your Goal (today's ₹)</span><span class="goal-val" id="goal-now">—</span></div>
+        <div class="goal-row"><span class="goal-key">Inflation-Adjusted Target</span><span class="goal-val" id="goal-adj">—</span></div>
+        <div class="goal-row"><span class="goal-key">Existing Savings Contribution</span><span class="goal-val" id="goal-existing-contrib">—</span></div>
+        <div style="height:1px;background:rgba(245,240,232,0.1);margin:0.75rem 0"></div>
+        <div class="goal-row"><span class="goal-key">Monthly SIP Required</span><span class="goal-val" id="goal-sip" style="font-size:1.2rem;color:var(--amber)">—</span></div>
+        <div class="goal-row"><span class="goal-key">One-Time Lump Sum Required</span><span class="goal-val" id="goal-lump">—</span></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-header">
+          <span class="chart-title-text">SIP vs Lump Sum vs Target</span>
+        </div>
+        <canvas id="goalChart" height="200"></canvas>
+      </div>
+      <div class="insight-box">
+        <div class="insight-icon">🎯</div>
+        <div class="insight-text" id="goal-insight">Set your target to see how much you need to invest.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ TAB: COMPARE ═══ -->
+<section class="section" id="tab-compare">
+  <div class="section-head">
+    <div class="section-label">Tool 04</div>
+    <h2 class="section-title">Compare Fund Types</h2>
+    <p class="section-desc">Understand how different mutual fund categories differ on risk, return, liquidity, tax treatment, and suitability.</p>
+  </div>
+  <div class="compare-selects">
+    <div class="compare-select-wrap">
+      <label>Fund A</label>
+      <select class="compare-sel" id="fund-a">
+        <option value="largecap">Large Cap Equity</option>
+        <option value="midcap">Mid Cap Equity</option>
+        <option value="smallcap">Small Cap Equity</option>
+        <option value="hybrid">Hybrid / Balanced</option>
+        <option value="debt">Debt / Bond</option>
+        <option value="liquid">Liquid Fund</option>
+        <option value="elss">ELSS (Tax Saver)</option>
+        <option value="index">Index Fund</option>
+      </select>
+    </div>
+    <div class="compare-select-wrap">
+      <label>Fund B</label>
+      <select class="compare-sel" id="fund-b">
+        <option value="largecap">Large Cap Equity</option>
+        <option value="midcap" selected>Mid Cap Equity</option>
+        <option value="smallcap">Small Cap Equity</option>
+        <option value="hybrid">Hybrid / Balanced</option>
+        <option value="debt">Debt / Bond</option>
+        <option value="liquid">Liquid Fund</option>
+        <option value="elss">ELSS (Tax Saver)</option>
+        <option value="index">Index Fund</option>
+      </select>
+    </div>
+  </div>
+  <div class="compare-panels">
+    <div class="fund-panel" id="fund-panel-a"></div>
+    <div class="fund-panel" id="fund-panel-b"></div>
+  </div>
+  <div class="chart-box" style="margin-bottom:1.25rem">
+    <div class="chart-header"><span class="chart-title-text">Risk vs Return Spectrum (All Fund Types)</span></div>
+    <canvas id="compareChart" height="160"></canvas>
+  </div>
+  <div class="insight-box"><div class="insight-icon">📊</div><div class="insight-text" id="compare-insight">Select fund types above to compare them.</div></div>
+</section>
+
+<!-- ═══ TAB: SCENARIOS ═══ -->
+<section class="section" id="tab-scenarios">
+  <div class="section-head">
+    <div class="section-label">Tool 05</div>
+    <h2 class="section-title">Scenario Comparison</h2>
+    <p class="section-desc">Compare two SIP scenarios side by side — early vs late start, aggressive vs conservative. See the real cost of delay.</p>
+  </div>
+  <div class="compare-panels">
+    <div class="inputs-panel">
+      <div style="font-family:var(--serif);font-size:0.95rem;font-weight:700;margin-bottom:1.1rem;color:var(--amber);border-bottom:1px solid rgba(245,240,232,0.1);padding-bottom:0.6rem">Scenario A</div>
+      <div class="input-group">
+        <div class="input-label">Monthly SIP <span class="input-val" id="sc-a-amt-lbl">₹5,000</span></div>
+        <input type="range" id="sc-a-amt" min="500" max="100000" step="500" value="5000">
+        <div class="range-bounds"><span>₹500</span><span>₹1L</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Return Rate <span class="input-val" id="sc-a-rate-lbl">12%</span></div>
+        <input type="range" id="sc-a-rate" min="4" max="25" step="0.5" value="12">
+        <div class="range-bounds"><span>4%</span><span>25%</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Years <span class="input-val" id="sc-a-yrs-lbl">20 years</span></div>
+        <input type="range" id="sc-a-yrs" min="1" max="40" step="1" value="20">
+        <div class="range-bounds"><span>1</span><span>40</span></div>
+      </div>
+      <div class="input-group" style="margin-bottom:0">
+        <div class="input-label">Step-Up <span class="input-val" id="sc-a-step-lbl">5%/yr</span></div>
+        <input type="range" id="sc-a-step" min="0" max="20" step="1" value="5">
+        <div class="range-bounds"><span>0%</span><span>20%</span></div>
+      </div>
+    </div>
+    <div class="inputs-panel">
+      <div style="font-family:var(--serif);font-size:0.95rem;font-weight:700;margin-bottom:1.1rem;color:var(--teal);border-bottom:1px solid rgba(245,240,232,0.1);padding-bottom:0.6rem">Scenario B</div>
+      <div class="input-group">
+        <div class="input-label">Monthly SIP <span class="input-val" id="sc-b-amt-lbl">₹5,000</span></div>
+        <input type="range" id="sc-b-amt" min="500" max="100000" step="500" value="5000">
+        <div class="range-bounds"><span>₹500</span><span>₹1L</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Return Rate <span class="input-val" id="sc-b-rate-lbl">12%</span></div>
+        <input type="range" id="sc-b-rate" min="4" max="25" step="0.5" value="12">
+        <div class="range-bounds"><span>4%</span><span>25%</span></div>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Years <span class="input-val" id="sc-b-yrs-lbl">10 years</span></div>
+        <input type="range" id="sc-b-yrs" min="1" max="40" step="1" value="10">
+        <div class="range-bounds"><span>1</span><span>40</span></div>
+      </div>
+      <div class="input-group" style="margin-bottom:0">
+        <div class="input-label">Step-Up <span class="input-val" id="sc-b-step-lbl">0%/yr</span></div>
+        <input type="range" id="sc-b-step" min="0" max="20" step="1" value="0">
+        <div class="range-bounds"><span>0%</span><span>20%</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="scenario-grid" style="margin-top:1.25rem">
+    <div class="scenario-card">
+      <div class="sc-label" style="border-color:var(--amber)">Scenario A Result</div>
+      <div style="font-family:var(--mono);font-size:0.78rem;color:rgba(13,13,13,0.6);line-height:2">
+        Corpus: <strong id="sc-a-corpus" style="color:var(--amber);font-size:1.1rem">—</strong><br>
+        Invested: <span id="sc-a-invested">—</span><br>
+        Gains: <span id="sc-a-gains" style="color:var(--teal)">—</span>
+      </div>
+    </div>
+    <div class="scenario-card">
+      <div class="sc-label" style="border-color:var(--teal)">Scenario B Result</div>
+      <div style="font-family:var(--mono);font-size:0.78rem;color:rgba(13,13,13,0.6);line-height:2">
+        Corpus: <strong id="sc-b-corpus" style="color:var(--teal);font-size:1.1rem">—</strong><br>
+        Invested: <span id="sc-b-invested">—</span><br>
+        Gains: <span id="sc-b-gains" style="color:var(--amber)">—</span>
+      </div>
+    </div>
+  </div>
+  <div class="chart-box" style="margin-top:1.25rem">
+    <div class="chart-header">
+      <span class="chart-title-text">A vs B Growth Over Time</span>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#e8a020"></div>Scenario A</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1a7a6e"></div>Scenario B</div>
+      </div>
+    </div>
+    <canvas id="scChart" height="200"></canvas>
+  </div>
+  <div class="insight-box" style="margin-top:1.25rem"><div class="insight-icon">⚡</div><div class="insight-text" id="sc-insight">Adjust both scenarios to compare outcomes.</div></div>
+</section>
+
+<!-- ═══ TAB: CONCEPTS ═══ -->
+<section class="section" id="tab-concepts">
+  <div class="section-head">
+    <div class="section-label">Tool 06</div>
+    <h2 class="section-title">Key Concepts</h2>
+    <p class="section-desc">The essential vocabulary of mutual fund investing, explained plainly with practical examples.</p>
+  </div>
+  <div class="concepts-grid">
+    <div class="concept-card" data-n="01"><div class="concept-tag">Foundational</div><div class="concept-title">NAV — Net Asset Value</div><div class="concept-body">The per-unit price of a mutual fund, calculated daily. Total assets minus liabilities, divided by outstanding units. When NAV rises, your investment value grows proportionally.</div><div class="concept-eg">Fund assets = ₹100 Cr, Units = 1 Cr → NAV = ₹100/unit</div></div>
+    <div class="concept-card" data-n="02"><div class="concept-tag">The Core Engine</div><div class="concept-title">Compounding</div><div class="concept-body">Earning returns on your previous returns. The longer you stay invested, the more dramatic the effect — wealth doesn't grow linearly, it accelerates like a snowball rolling downhill.</div><div class="concept-eg">₹10K at 12% for 30 years = ₹3 Lakh (vs ₹46K via simple interest)</div></div>
+    <div class="concept-card" data-n="03"><div class="concept-tag">Cost</div><div class="concept-title">Expense Ratio</div><div class="concept-body">Annual fee charged by the fund as % of assets under management. Deducted daily from NAV. Over decades, even 1% difference compounds significantly against you.</div><div class="concept-eg">ER 0.1% vs 1.5% on ₹10L over 20 years = ~₹10–15 Lakh less corpus</div></div>
+    <div class="concept-card" data-n="04"><div class="concept-tag">SIP Benefit</div><div class="concept-title">Rupee Cost Averaging</div><div class="concept-body">Fixed monthly investment buys more units when prices are low, fewer when high. Over time, your average cost per unit is lower than the average price — automatically, no timing needed.</div><div class="concept-eg">₹1000/month: NAV ₹50 → 20 units; NAV ₹40 → 25 units. Avg cost: ₹44.44</div></div>
+    <div class="concept-card" data-n="05"><div class="concept-tag">Tax</div><div class="concept-title">LTCG vs STCG</div><div class="concept-body">Long-Term Capital Gains (equity held >1 year): taxed at 12.5% above ₹1.25L/year exemption. Short-Term (<1 year): 20%. Holding longer is not just good for compounding — it's tax-smart too.</div><div class="concept-eg">₹2L LTCG gain: tax only on ₹75K (above exemption) = ₹9,375</div></div>
+    <div class="concept-card" data-n="06"><div class="concept-tag">Risk Management</div><div class="concept-title">Diversification</div><div class="concept-body">A mutual fund holds 50–100+ stocks. If one stock crashes 80%, your exposure is typically just 1–2% of the fund. Diversification doesn't eliminate risk — it reduces concentration risk.</div><div class="concept-eg">1 stock crashes 80%: 2% fund allocation → your portfolio falls only ~1.6%</div></div>
+    <div class="concept-card" data-n="07"><div class="concept-tag">Performance Metric</div><div class="concept-title">CAGR</div><div class="concept-body">Compound Annual Growth Rate — the smoothed yearly rate at which an investment grew. The only fair way to compare investments over different time periods. Formula: (End/Start)^(1/years) − 1.</div><div class="concept-eg">₹1L → ₹3.1L in 10 years → CAGR = (3.1)^0.1 − 1 ≈ 12%</div></div>
+    <div class="concept-card" data-n="08"><div class="concept-tag">Risk Measures</div><div class="concept-title">Standard Deviation & Beta</div><div class="concept-body">SD measures volatility — how much returns fluctuate around the average. Beta measures sensitivity to market movement. Beta >1 = more volatile than market. Beta <1 = steadier than market.</div><div class="concept-eg">Beta 1.3: Market falls 10% → fund likely falls ~13%</div></div>
+    <div class="concept-card" data-n="09"><div class="concept-tag">Strategy</div><div class="concept-title">Step-Up SIP</div><div class="concept-body">Increase your SIP amount every year as income grows (typically 5–10%). Even small annual increases dramatically boost your final corpus. Start small — but grow your investment with your salary.</div><div class="concept-eg">₹5K/month flat for 20yr vs +10%/yr step-up: nearly 2× the corpus</div></div>
+    <div class="concept-card" data-n="10"><div class="concept-tag">Behavior</div><div class="concept-title">Recency Bias</div><div class="concept-body">Investors overweight recent performance — chasing last year's top performers or fleeing after a crash. Markets are cyclical. What's best now often won't be best next year. Consistency beats timing.</div><div class="concept-eg">SIP investors who stayed through 2020 COVID crash recovered fully + more by Dec 2020</div></div>
+    <div class="concept-card" data-n="11"><div class="concept-tag">Tax Saving</div><div class="concept-title">ELSS — 80C Deduction</div><div class="concept-body">Equity Linked Savings Scheme. Invest up to ₹1.5L/year to save up to ₹46,800 in taxes (30% slab). 3-year lock-in — shortest of all 80C options. Dual benefit: tax savings + equity returns.</div><div class="concept-eg">₹1.5L ELSS investment at 30% slab → ₹46,800 immediate tax saving</div></div>
+    <div class="concept-card" data-n="12"><div class="concept-tag">Planning</div><div class="concept-title">Asset Allocation</div><div class="concept-body">Dividing investments across asset classes (equity, debt, gold) based on risk profile and horizon. Younger investors can hold more equity. Rebalance annually to maintain target allocation.</div><div class="concept-eg">Age 30: 80% equity + 20% debt. Age 55: 50% equity + 50% debt (thumb rule)</div></div>
+  </div>
+</section>
+
+<!-- ═══ TAB: QUIZ ═══ -->
+<section class="section" id="tab-quiz">
+  <div class="section-head">
+    <div class="section-label">Tool 07</div>
+    <h2 class="section-title">Test Yourself</h2>
+    <p class="section-desc">8 questions with detailed explanations. Learn as you go — every wrong answer teaches you something.</p>
+  </div>
+  <div class="quiz-wrap">
+    <div id="quiz-active">
+      <div class="quiz-progress" id="quiz-progress"></div>
+      <div class="quiz-card">
+        <div class="quiz-q" id="quiz-question"></div>
+        <div class="quiz-ctx" id="quiz-context"></div>
+        <div class="quiz-opts" id="quiz-options"></div>
+      </div>
+      <div class="quiz-explain" id="quiz-explain"></div>
+      <button class="quiz-btn" id="quiz-next">Next Question →</button>
+    </div>
+    <div class="quiz-result" id="quiz-result">
+      <div class="result-score" id="result-score"></div>
+      <div class="result-of">out of <span id="result-total"></span> correct</div>
+      <div class="result-msg" id="result-msg"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <button class="retry-btn" onclick="startQuiz()">↺ Retake Quiz</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="disc-icon">⚠</div>
+  <div class="disclaimer">
+    <strong>Educational Purpose Only.</strong> All projections are illustrative, based on assumed constant returns. Actual returns vary and can be negative.
+    Mutual fund investments are subject to market risks. Past performance does not guarantee future results. Tax calculations are indicative only — consult a tax advisor.
+    This tool is not affiliated with any fund house or SEBI-registered advisor.
+    <strong>Fundament is a free Investor Education & Awareness Initiative.</strong>
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG & STATE
+// ═══════════════════════════════════════════
+// Auto-detect API URL — works on Render (cloud) and locally
+const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? `http://${window.location.hostname}:8080/api`
+  : `${window.location.origin}/api`;
+let serverOnline = false;
+let charts = {};
+let sipStepup = 5, lsFreq = 4, goalType = 'retirement';
+
+// ═══════════════════════════════════════════
+// SERVER CHECK & LOADER
+// ═══════════════════════════════════════════
+async function checkServer() {
+  const bar = document.getElementById('loader-bar');
+  const status = document.getElementById('loader-status');
+
+  bar.style.width = '30%';
+  status.textContent = 'Connecting to server...';
+
+  try {
+    const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      serverOnline = true;
+      bar.style.width = '80%';
+      status.textContent = 'Server connected!';
+      setServerStatus(true);
+    }
+  } catch {
+    serverOnline = false;
+    setServerStatus(false);
+    document.getElementById('api-banner').classList.add('show');
+  }
+
+  // Load initial data
+  bar.style.width = '95%';
+  status.textContent = 'Loading...';
+
+  await Promise.all([updateSIP(), updateLS(), updateGoal(), updateCompare(), updateScenarios()]);
+  loadQuiz();
+
+  bar.style.width = '100%';
+  setTimeout(() => document.getElementById('app-loader').classList.add('hidden'), 300);
+}
+
+function setServerStatus(online) {
+  const dot = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+  dot.className = 'status-dot ' + (online ? 'online' : 'error');
+  text.textContent = online ? 'server live' : 'local mode';
+}
+
+// ═══════════════════════════════════════════
+// FORMATTING
+// ═══════════════════════════════════════════
+function fmt(n) {
+  if (n >= 1e7) return '₹' + (n/1e7).toFixed(2) + ' Cr';
+  if (n >= 1e5) return '₹' + (n/1e5).toFixed(2) + 'L';
+  if (n >= 1e3) return '₹' + (n/1e3).toFixed(1) + 'K';
+  return '₹' + Math.round(n).toLocaleString('en-IN');
+}
+function fmtC(n) {
+  if (n >= 1e7) return '₹' + (n/1e7).toFixed(1) + 'Cr';
+  if (n >= 1e5) return '₹' + (n/1e5).toFixed(1) + 'L';
+  if (n >= 1e3) return '₹' + Math.round(n/1000) + 'K';
+  return '₹' + Math.round(n);
+}
+
+// ═══════════════════════════════════════════
+// API HELPERS
+// ═══════════════════════════════════════════
+async function apiFetch(endpoint) {
+  if (serverOnline) {
+    try {
+      const r = await fetch(`${API}${endpoint}`, { signal: AbortSignal.timeout(5000) });
+      return await r.json();
+    } catch { serverOnline = false; setServerStatus(false); }
+  }
+  return null;
+}
+
+async function apiPost(endpoint, body) {
+  if (serverOnline) {
+    try {
+      const r = await fetch(`${API}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(5000),
+      });
+      return await r.json();
+    } catch { serverOnline = false; setServerStatus(false); }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════
+// LOCAL CALC FALLBACKS
+// ═══════════════════════════════════════════
+function localSIP(monthly, rate, years, inflation, stepup) {
+  const mr = rate / 100 / 12;
+  let corpus = 0, invested = 0, cur = monthly;
+  const yearly = [];
+  for (let y = 1; y <= years; y++) {
+    for (let m = 0; m < 12; m++) { corpus = (corpus + cur) * (1 + mr); invested += cur; }
+    if (stepup > 0) cur *= (1 + stepup / 100);
+    yearly.push({ year: y, invested: Math.round(invested), value: Math.round(corpus), gains: Math.round(corpus - invested), real: Math.round(corpus / (1 + inflation / 100) ** y) });
+  }
+  const gains = corpus - invested;
+  return { corpus: Math.round(corpus), total_invested: Math.round(invested), gains: Math.round(gains), gain_pct: Math.round(gains / invested * 100 * 10) / 10, real_value: Math.round(corpus / (1 + inflation / 100) ** years), multiplier: Math.round(corpus / invested * 100) / 100, yearly };
+}
+
+function localLS(P, rate, years, inflation, freq) {
+  const n = freq;
+  const c = P * (1 + rate / 100 / n) ** (n * years);
+  const s = P * (1 + rate / 100 * years);
+  const r = c / (1 + inflation / 100) ** years;
+  const yearly = Array.from({ length: years }, (_, i) => ({
+    year: i + 1,
+    compound: Math.round(P * (1 + rate / 100 / n) ** (n * (i + 1))),
+    simple: Math.round(P * (1 + rate / 100 * (i + 1))),
+    real: Math.round(P * (1 + rate / 100 / n) ** (n * (i + 1)) / (1 + inflation / 100) ** (i + 1)),
+  }));
+  return { corpus: Math.round(c), simple: Math.round(s), bonus: Math.round(c - s), real_value: Math.round(r), multiplier: Math.round(c / P * 100) / 100, rule72_years: Math.round(72 / rate * 10) / 10, doubles: Math.round(years / (72 / rate) * 100) / 100, yearly };
+}
+
+function localGoal(target, years, rate, inflation, existing) {
+  const realTarget = target * (1 + inflation / 100) ** years;
+  const existingFV = existing * (1 + rate / 100) ** years;
+  const needed = Math.max(0, realTarget - existingFV);
+  const mr = rate / 100 / 12, months = years * 12;
+  const sipNeeded = mr > 0 ? needed / (((1 + mr) ** months - 1) / mr * (1 + mr)) : needed / months;
+  const lumpNeeded = rate > 0 ? needed / (1 + rate / 100) ** years : needed;
+  return { target, inflation_adjusted_target: Math.round(realTarget), sip_needed: Math.round(Math.max(0, sipNeeded)), lumpsum_needed: Math.round(Math.max(0, lumpNeeded)), years, rate };
+}
+
+// ═══════════════════════════════════════════
+// CHART DEFAULTS
+// ═══════════════════════════════════════════
+function chartDefaults() {
+  return {
+    responsive: true, maintainAspectRatio: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0d0d0d', titleFont: { family: 'DM Mono', size: 10 },
+        bodyFont: { family: 'DM Mono', size: 11 }, padding: 10,
+        callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmtC(ctx.raw)}` },
+      },
+    },
+    scales: {
+      x: { grid: { color: 'rgba(13,13,13,0.05)' }, ticks: { font: { family: 'DM Mono', size: 9 }, color: 'rgba(13,13,13,0.3)', maxTicksLimit: 10 } },
+      y: { grid: { color: 'rgba(13,13,13,0.05)' }, ticks: { font: { family: 'DM Mono', size: 9 }, color: 'rgba(13,13,13,0.3)', callback: v => fmtC(v) } },
+    },
+  };
+}
+
+function makeChart(id, datasets, labels, opts = {}) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'line',
+    data: { labels, datasets },
+    options: { ...chartDefaults(), ...opts },
+  });
+}
+
+// ═══════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ═══════════════════════════════════════════
+// TOGGLE GROUPS
+// ═══════════════════════════════════════════
+function initToggle(groupId, onChange) {
+  document.getElementById(groupId)?.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(groupId).querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      onChange(+btn.dataset.val || btn.dataset.val);
+    });
+  });
+}
+
+initToggle('sip-stepup-grp', v => { sipStepup = v; updateSIP(); });
+initToggle('ls-freq-grp', v => { lsFreq = v; updateLS(); });
+initToggle('goal-type-grp', v => {
+  goalType = v;
+  const labels = { retirement: 'Retirement Goal', home: 'Home Purchase', education: 'Education Fund', custom: 'Custom Goal' };
+  document.getElementById('goal-title-display').textContent = labels[v] || 'Goal';
+  updateGoal();
+});
+
+// ═══════════════════════════════════════════
+// RANGE BINDINGS
+// ═══════════════════════════════════════════
+function bindRange(id, labelId, format, onChange) {
+  const el = document.getElementById(id);
+  el?.addEventListener('input', () => {
+    document.getElementById(labelId).textContent = format(+el.value);
+    onChange();
+  });
+}
+
+bindRange('sip-amt', 'sip-amt-lbl', v => fmt(v), updateSIP);
+bindRange('sip-rate', 'sip-rate-lbl', v => v + '%', updateSIP);
+bindRange('sip-yrs', 'sip-yrs-lbl', v => v + ' year' + (v > 1 ? 's' : ''), updateSIP);
+bindRange('sip-inf', 'sip-inf-lbl', v => v + '%', updateSIP);
+
+bindRange('ls-amt', 'ls-amt-lbl', v => fmt(v), updateLS);
+bindRange('ls-rate', 'ls-rate-lbl', v => v + '%', updateLS);
+bindRange('ls-yrs', 'ls-yrs-lbl', v => v + ' year' + (v > 1 ? 's' : ''), updateLS);
+bindRange('ls-inf', 'ls-inf-lbl', v => v + '%', updateLS);
+
+bindRange('goal-target', 'goal-target-lbl', v => fmt(v), updateGoal);
+bindRange('goal-yrs', 'goal-yrs-lbl', v => v + ' years', updateGoal);
+bindRange('goal-rate', 'goal-rate-lbl', v => v + '%', updateGoal);
+bindRange('goal-inf', 'goal-inf-lbl', v => v + '%', updateGoal);
+bindRange('goal-existing', 'goal-existing-lbl', v => fmt(v), updateGoal);
+
+bindRange('sc-a-amt', 'sc-a-amt-lbl', v => fmt(v), updateScenarios);
+bindRange('sc-a-rate', 'sc-a-rate-lbl', v => v + '%', updateScenarios);
+bindRange('sc-a-yrs', 'sc-a-yrs-lbl', v => v + ' years', updateScenarios);
+bindRange('sc-a-step', 'sc-a-step-lbl', v => v + '%/yr', updateScenarios);
+bindRange('sc-b-amt', 'sc-b-amt-lbl', v => fmt(v), updateScenarios);
+bindRange('sc-b-rate', 'sc-b-rate-lbl', v => v + '%', updateScenarios);
+bindRange('sc-b-yrs', 'sc-b-yrs-lbl', v => v + ' years', updateScenarios);
+bindRange('sc-b-step', 'sc-b-step-lbl', v => v + '%/yr', updateScenarios);
+
+document.getElementById('fund-a')?.addEventListener('change', updateCompare);
+document.getElementById('fund-b')?.addEventListener('change', updateCompare);
+
+// ═══════════════════════════════════════════
+// SIP
+// ═══════════════════════════════════════════
+async function updateSIP() {
+  const monthly = +document.getElementById('sip-amt').value;
+  const rate = +document.getElementById('sip-rate').value;
+  const years = +document.getElementById('sip-yrs').value;
+  const inflation = +document.getElementById('sip-inf').value;
+
+  let d = await apiFetch(`/sip?monthly=${monthly}&rate=${rate}&years=${years}&inflation=${inflation}&stepup=${sipStepup}`);
+  if (!d) d = localSIP(monthly, rate, years, inflation, sipStepup);
+
+  document.getElementById('sip-corpus').textContent = fmt(d.corpus);
+  document.getElementById('sip-gains').textContent = fmt(d.gains);
+  document.getElementById('sip-gain-pct').textContent = d.gain_pct + '% gain on invested';
+  document.getElementById('sip-real').textContent = fmt(d.real_value);
+
+  document.getElementById('sip-insight').innerHTML =
+    `₹${fmt(monthly)}/month grows to <strong>${fmt(d.corpus)}</strong> — that's <strong>${d.multiplier}× your total investment</strong>. ` +
+    `Compounding contributed <strong>${fmt(d.gains)}</strong>. Real purchasing power after inflation: <strong>${fmt(d.real_value)}</strong>.` +
+    (sipStepup > 0 ? ` With +${sipStepup}%/yr step-up, each year you invest a little more.` : '');
+
+  // Table
+  const tbody = document.getElementById('sip-table');
+  tbody.innerHTML = '';
+  const step = years > 20 ? 5 : years > 10 ? 2 : 1;
+  d.yearly.forEach(row => {
+    if (row.year % step === 0 || row.year === years) {
+      tbody.innerHTML += `<tr>
+        <td>${row.year}</td>
+        <td>${fmtC(row.invested)}</td>
+        <td class="td-total">${fmtC(row.value)}</td>
+        <td class="td-gain">${fmtC(row.gains)}</td>
+        <td class="td-real">${fmtC(row.real)}</td>
+      </tr>`;
+    }
+  });
+
+  // Chart
+  const labels = d.yearly.map(r => `Yr ${r.year}`);
+  makeChart('sipChart', [
+    { label: 'Value', data: d.yearly.map(r => r.value), borderColor: '#e8a020', backgroundColor: 'rgba(232,160,32,0.08)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2.5 },
+    { label: 'Invested', data: d.yearly.map(r => r.invested), borderColor: 'rgba(192,72,48,0.7)', backgroundColor: 'transparent', fill: false, tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [4, 3] },
+    { label: 'Real', data: d.yearly.map(r => r.real), borderColor: '#1a7a6e', backgroundColor: 'transparent', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 1.5 },
+  ], labels);
+}
+
+// ═══════════════════════════════════════════
+// LUMP SUM
+// ═══════════════════════════════════════════
+async function updateLS() {
+  const P = +document.getElementById('ls-amt').value;
+  const rate = +document.getElementById('ls-rate').value;
+  const years = +document.getElementById('ls-yrs').value;
+  const inflation = +document.getElementById('ls-inf').value;
+
+  let d = await apiFetch(`/lumpsum?principal=${P}&rate=${rate}&years=${years}&inflation=${inflation}&freq=${lsFreq}`);
+  if (!d) d = localLS(P, rate, years, inflation, lsFreq);
+
+  document.getElementById('ls-corpus').textContent = fmt(d.corpus);
+  document.getElementById('ls-mult').textContent = d.multiplier + '× your money';
+  document.getElementById('ls-simple').textContent = fmt(d.simple);
+  document.getElementById('ls-bonus').textContent = fmt(d.bonus);
+  document.getElementById('r72-rate').textContent = rate + '%';
+  document.getElementById('r72-years').textContent = d.rule72_years + ' yrs';
+  document.getElementById('r72-horizon').textContent = years + ' yrs';
+  document.getElementById('r72-doubles').textContent = d.doubles + '×';
+
+  document.getElementById('ls-insight').innerHTML =
+    `${fmt(P)} grows to <strong>${fmt(d.corpus)}</strong> — <strong>${d.multiplier}× your money</strong>. ` +
+    `Compounding adds <strong>${fmt(d.bonus)}</strong> more than simple interest. ` +
+    `Inflation-adjusted real value: <strong>${fmt(d.real_value)}</strong>.`;
+
+  const labels = d.yearly.map(r => `Yr ${r.year}`);
+  makeChart('lsChart', [
+    { label: 'Compound', data: d.yearly.map(r => r.compound), borderColor: '#e8a020', backgroundColor: 'rgba(232,160,32,0.08)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2.5 },
+    { label: 'Simple', data: d.yearly.map(r => r.simple), borderColor: 'rgba(192,72,48,0.7)', backgroundColor: 'transparent', fill: false, tension: 0.1, pointRadius: 0, borderWidth: 1.5, borderDash: [5, 4] },
+    { label: 'Real', data: d.yearly.map(r => r.real), borderColor: '#1a7a6e', backgroundColor: 'transparent', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 1.5 },
+  ], labels);
+}
+
+// ═══════════════════════════════════════════
+// GOAL PLANNER
+// ═══════════════════════════════════════════
+async function updateGoal() {
+  const target = +document.getElementById('goal-target').value;
+  const years = +document.getElementById('goal-yrs').value;
+  const rate = +document.getElementById('goal-rate').value;
+  const inflation = +document.getElementById('goal-inf').value;
+  const existing = +document.getElementById('goal-existing').value;
+
+  let d = await apiFetch(`/goal?target=${target}&years=${years}&rate=${rate}&inflation=${inflation}&existing=${existing}`);
+  if (!d) d = localGoal(target, years, rate, inflation, existing);
+
+  document.getElementById('goal-now').textContent = fmt(target);
+  document.getElementById('goal-adj').textContent = fmt(d.inflation_adjusted_target);
+  document.getElementById('goal-existing-contrib').textContent = existing > 0 ? fmt(existing * (1 + rate/100)**years) : '₹0 (no existing savings)';
+  document.getElementById('goal-sip').textContent = fmt(d.sip_needed);
+  document.getElementById('goal-lump').textContent = fmt(d.lumpsum_needed);
+
+  document.getElementById('goal-insight').innerHTML =
+    `To reach <strong>${fmt(target)}</strong> in ${years} years, you need <strong>${fmt(d.sip_needed)}/month</strong> via SIP, ` +
+    `or a one-time investment of <strong>${fmt(d.lumpsum_needed)}</strong> today. ` +
+    `Inflation will make your target worth <strong>${fmt(d.inflation_adjusted_target)}</strong> in future rupees.`;
+
+  // Chart: SIP growth vs target
+  const sipData = localSIP(d.sip_needed, rate, years, inflation, 0);
+  const lumpData = localLS(d.lumpsum_needed, rate, years, inflation, 4);
+  const labels = sipData.yearly.map(r => `Yr ${r.year}`);
+  const targetLine = sipData.yearly.map(() => d.inflation_adjusted_target);
+
+  makeChart('goalChart', [
+    { label: 'SIP Growth', data: sipData.yearly.map(r => r.value), borderColor: '#e8a020', backgroundColor: 'rgba(232,160,32,0.07)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+    { label: 'Lump Sum Growth', data: lumpData.yearly.map(r => r.compound), borderColor: '#1a7a6e', backgroundColor: 'transparent', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+    { label: 'Inflation Target', data: targetLine, borderColor: 'rgba(192,72,48,0.6)', backgroundColor: 'transparent', fill: false, tension: 0, pointRadius: 0, borderWidth: 1.5, borderDash: [6, 4] },
+  ], labels);
+}
+
+// ═══════════════════════════════════════════
+// FUND COMPARE
+// ═══════════════════════════════════════════
+const FUNDS_LOCAL = {
+  largecap: { name: 'Large Cap Equity', color: '#e8a020', type: 'Equity — Domestic', risk: 'Moderate-High', risk_score: 6, return_range: '10–14%', return_score: 7, liquidity: 'T+3 days', liq_score: 7, horizon: '5+ years', min_invest: '₹500', exp_ratio: '0.5–1.5%', lock_in: 'None', ltcg: '12.5% >₹1.25L', stcg: '20%', description: 'Invests in top 100 companies by market cap. More stable than mid/small cap but lower upside.', ideal: 'Conservative to moderate investors wanting equity exposure' },
+  midcap: { name: 'Mid Cap Equity', color: '#1a7a6e', type: 'Equity — Domestic', risk: 'High', risk_score: 8, return_range: '12–18%', return_score: 8, liquidity: 'T+3 days', liq_score: 7, horizon: '7+ years', min_invest: '₹500', exp_ratio: '0.6–1.8%', lock_in: 'None', ltcg: '12.5% >₹1.25L', stcg: '20%', description: 'Companies ranked 101–250 by market cap. Higher growth potential with more volatility.', ideal: 'Investors with higher risk tolerance and long horizons' },
+  smallcap: { name: 'Small Cap Equity', color: '#c04830', type: 'Equity — Domestic', risk: 'Very High', risk_score: 10, return_range: '14–22%*', return_score: 9, liquidity: 'T+3 days', liq_score: 5, horizon: '10+ years', min_invest: '₹500', exp_ratio: '0.8–2.0%', lock_in: 'None', ltcg: '12.5% >₹1.25L', stcg: '20%', description: 'Companies outside top 250. Highest potential returns but extreme volatility.', ideal: 'Aggressive investors with 10+ year horizon' },
+  hybrid: { name: 'Hybrid / Balanced', color: '#7b5ea7', type: 'Equity + Debt', risk: 'Moderate', risk_score: 5, return_range: '8–12%', return_score: 6, liquidity: 'T+3 days', liq_score: 7, horizon: '3–5 years', min_invest: '₹500', exp_ratio: '0.5–1.5%', lock_in: 'None', ltcg: 'Depends on equity %', stcg: 'Depends on equity %', description: 'Mix of equity and debt for smoother growth.', ideal: 'Moderate risk investors wanting a one-fund solution' },
+  debt: { name: 'Debt / Bond Fund', color: '#4a7c8e', type: 'Fixed Income', risk: 'Low-Moderate', risk_score: 3, return_range: '6–9%', return_score: 4, liquidity: 'T+3 days', liq_score: 6, horizon: '1–3 years', min_invest: '₹500', exp_ratio: '0.2–1.0%', lock_in: 'None', ltcg: 'Slab rate', stcg: 'Slab rate', description: 'Government and corporate bonds. More predictable returns.', ideal: 'Conservative investors or near-term goals' },
+  liquid: { name: 'Liquid Fund', color: '#5a8a5a', type: 'Money Market', risk: 'Very Low', risk_score: 1, return_range: '5–7%', return_score: 3, liquidity: 'T+1 / Same day', liq_score: 10, horizon: 'Days to 3 months', min_invest: '₹500', exp_ratio: '0.1–0.5%', lock_in: 'None', ltcg: 'Slab rate', stcg: 'Slab rate', description: 'Very short-term instruments. Stable and highly liquid.', ideal: 'Emergency fund or parking short-term surplus' },
+  elss: { name: 'ELSS (Tax Saver)', color: '#c85a1a', type: 'Equity — Tax Benefit', risk: 'High', risk_score: 8, return_range: '10–15%', return_score: 7, liquidity: 'Locked 3 years', liq_score: 3, horizon: '3+ years', min_invest: '₹500', exp_ratio: '0.5–1.8%', lock_in: '3 years', ltcg: '12.5% >₹1.25L', stcg: 'N/A', description: '3-year lock-in. Qualifies for 80C deduction up to ₹1.5L.', ideal: 'Investors seeking tax savings + equity returns' },
+  index: { name: 'Index Fund', color: '#2a6a9a', type: 'Passive Equity', risk: 'Moderate-High', risk_score: 6, return_range: '10–13%*', return_score: 7, liquidity: 'T+3 days', liq_score: 7, horizon: '5+ years', min_invest: '₹500', exp_ratio: '0.1–0.3%', lock_in: 'None', ltcg: '12.5% >₹1.25L', stcg: '20%', description: 'Tracks an index (e.g., Nifty 50). Lowest costs, no manager risk.', ideal: 'Cost-conscious long-term investors' },
+};
+
+function renderFundPanel(fund, panelId) {
+  const riskBar = (score, color) =>
+    `<div class="risk-bar">${Array.from({length:10},(_,i)=>`<div class="risk-pip" style="background:${i<score?color:'rgba(13,13,13,0.08)'}"></div>`).join('')}</div>`;
+  const cls = (t, v) => {
+    if (t==='risk') return v>=7?'v-warn':v<=3?'v-good':'v-neutral';
+    if (t==='ret') return v>=7?'v-good':v<=3?'v-warn':'v-neutral';
+    if (t==='liq') return v>=7?'v-good':v<=3?'v-warn':'v-neutral';
+    return 'v-neutral';
+  };
+  document.getElementById(panelId).innerHTML = `
+    <div class="fund-panel-head">
+      <div class="fund-dot" style="background:${fund.color}"></div>
+      <div><div class="fund-panel-name">${fund.name}</div><div class="fund-panel-type">${fund.type}</div></div>
+    </div>
+    <p class="fund-desc">${fund.description}</p>
+    <div class="fund-metric"><span class="metric-k">Risk</span><span class="metric-v ${cls('risk',fund.risk_score)}">${fund.risk}${riskBar(fund.risk_score,fund.color)}</span></div>
+    <div class="fund-metric"><span class="metric-k">Indicative Returns</span><span class="metric-v ${cls('ret',fund.return_score)}">${fund.return_range}</span></div>
+    <div class="fund-metric"><span class="metric-k">Liquidity</span><span class="metric-v ${cls('liq',fund.liq_score)}">${fund.liquidity}</span></div>
+    <div class="fund-metric"><span class="metric-k">Ideal Horizon</span><span class="metric-v v-neutral">${fund.horizon}</span></div>
+    <div class="fund-metric"><span class="metric-k">Min Investment</span><span class="metric-v v-neutral">${fund.min_invest}</span></div>
+    <div class="fund-metric"><span class="metric-k">Expense Ratio</span><span class="metric-v v-neutral">${fund.exp_ratio}</span></div>
+    <div class="fund-metric"><span class="metric-k">Lock-in</span><span class="metric-v ${fund.lock_in==='None'?'v-good':'v-warn'}">${fund.lock_in}</span></div>
+    <div class="fund-metric"><span class="metric-k">LTCG Tax</span><span class="metric-v v-neutral">${fund.ltcg}</span></div>
+    <div class="fund-ideal">${fund.ideal}</div>
+  `;
+}
+
+async function updateCompare() {
+  const aId = document.getElementById('fund-a').value;
+  const bId = document.getElementById('fund-b').value;
+
+  let data = await apiFetch(`/compare?a=${aId}&b=${bId}`);
+  const fa = data?.fund_a || FUNDS_LOCAL[aId];
+  const fb = data?.fund_b || FUNDS_LOCAL[bId];
+
+  renderFundPanel(fa, 'fund-panel-a');
+  renderFundPanel(fb, 'fund-panel-b');
+
+  const insights = data?.insights || [];
+  document.getElementById('compare-insight').innerHTML =
+    (insights.length ? insights.join(' ') + ' ' : '') +
+    '<em>Past performance does not guarantee future results. All returns are indicative.</em>';
+
+  // Scatter chart - all funds
+  const allFunds = Object.values(FUNDS_LOCAL);
+  if (charts['compareChart']) charts['compareChart'].destroy();
+  charts['compareChart'] = new Chart(document.getElementById('compareChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        data: allFunds.map(f => ({ x: f.risk_score, y: f.return_score })),
+        backgroundColor: allFunds.map(f => f.color + 'cc'),
+        pointRadius: allFunds.map(f => (f.name===fa.name||f.name===fb.name) ? 12 : 7),
+        pointHoverRadius: 14,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0d0d0d',
+          callbacks: {
+            label: ctx => {
+              const f = allFunds[ctx.dataIndex];
+              return ` ${f.name}  Risk: ${f.risk_score}/10  Return: ${f.return_score}/10`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Risk →', font: { family: 'DM Mono', size: 10 } }, min: 0, max: 11, grid: { color: 'rgba(13,13,13,0.05)' } },
+        y: { title: { display: true, text: 'Return Potential →', font: { family: 'DM Mono', size: 10 } }, min: 0, max: 11, grid: { color: 'rgba(13,13,13,0.05)' } },
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════
+// SCENARIOS
+// ═══════════════════════════════════════════
+async function updateScenarios() {
+  const aAmt = +document.getElementById('sc-a-amt').value;
+  const aRate = +document.getElementById('sc-a-rate').value;
+  const aYrs = +document.getElementById('sc-a-yrs').value;
+  const aStep = +document.getElementById('sc-a-step').value;
+  const bAmt = +document.getElementById('sc-b-amt').value;
+  const bRate = +document.getElementById('sc-b-rate').value;
+  const bYrs = +document.getElementById('sc-b-yrs').value;
+  const bStep = +document.getElementById('sc-b-step').value;
+
+  let dA, dB;
+  const body = {
+    scenarios: [
+      { monthly: aAmt, rate: aRate, years: aYrs, inflation: 6, stepup: aStep, label: 'A' },
+      { monthly: bAmt, rate: bRate, years: bYrs, inflation: 6, stepup: bStep, label: 'B' },
+    ]
+  };
+  const res = await apiPost('/sip/batch', body);
+  dA = res?.results?.[0] || localSIP(aAmt, aRate, aYrs, 6, aStep);
+  dB = res?.results?.[1] || localSIP(bAmt, bRate, bYrs, 6, bStep);
+
+  document.getElementById('sc-a-corpus').textContent = fmt(dA.corpus);
+  document.getElementById('sc-a-invested').textContent = fmt(dA.total_invested);
+  document.getElementById('sc-a-gains').textContent = fmt(dA.gains);
+  document.getElementById('sc-b-corpus').textContent = fmt(dB.corpus);
+  document.getElementById('sc-b-invested').textContent = fmt(dB.total_invested);
+  document.getElementById('sc-b-gains').textContent = fmt(dB.gains);
+
+  const maxYrs = Math.max(aYrs, bYrs);
+  const labelsAll = Array.from({ length: maxYrs }, (_, i) => `Yr ${i+1}`);
+
+  const padA = labelsAll.map((_, i) => i < dA.yearly.length ? dA.yearly[i].value : null);
+  const padB = labelsAll.map((_, i) => i < dB.yearly.length ? dB.yearly[i].value : null);
+
+  makeChart('scChart', [
+    { label: 'Scenario A', data: padA, borderColor: '#e8a020', backgroundColor: 'rgba(232,160,32,0.07)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2.5, spanGaps: false },
+    { label: 'Scenario B', data: padB, borderColor: '#1a7a6e', backgroundColor: 'rgba(26,122,110,0.07)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2.5, spanGaps: false },
+  ], labelsAll);
+
+  const winner = dA.corpus > dB.corpus ? 'Scenario A' : dA.corpus < dB.corpus ? 'Scenario B' : 'Both scenarios';
+  const diff = Math.abs(dA.corpus - dB.corpus);
+  document.getElementById('sc-insight').innerHTML =
+    `<strong>${winner}</strong> finishes ahead${diff > 0 ? ` by <strong>${fmt(diff)}</strong>` : ''}. ` +
+    `A invested <strong>${fmt(dA.total_invested)}</strong> over ${aYrs} years${aStep?` with +${aStep}%/yr step-up`:''}. ` +
+    `B invested <strong>${fmt(dB.total_invested)}</strong> over ${bYrs} years${bStep?` with +${bStep}%/yr step-up`:''}.`;
+}
+
+// ═══════════════════════════════════════════
+// QUIZ
+// ═══════════════════════════════════════════
+let quizQuestions = [], quizCurrent = 0, quizScore = 0, quizAnswered = false;
+
+async function loadQuiz() {
+  const data = await apiFetch('/quiz');
+  if (data?.questions) quizQuestions = data.questions;
+  startQuiz();
+}
+
+function startQuiz() {
+  quizCurrent = 0; quizScore = 0; quizAnswered = false;
+  document.getElementById('quiz-active').style.display = 'block';
+  document.getElementById('quiz-result').classList.remove('show');
+  renderQuizQ();
+}
+
+function renderQuizQ() {
+  if (!quizQuestions.length) return;
+  quizAnswered = false;
+  const q = quizQuestions[quizCurrent];
+  const total = quizQuestions.length;
+
+  // Progress
+  document.getElementById('quiz-progress').innerHTML = quizQuestions.map((_, i) =>
+    `<div class="q-pip ${i<quizCurrent?'done':i===quizCurrent?'current':''}"></div>`
+  ).join('');
+
+  document.getElementById('quiz-question').textContent = q.question;
+  document.getElementById('quiz-context').textContent = q.context;
+  document.getElementById('quiz-explain').className = 'quiz-explain';
+  document.getElementById('quiz-next').className = 'quiz-btn';
+
+  const letters = ['A','B','C','D'];
+  document.getElementById('quiz-options').innerHTML = q.options.map((opt, i) => `
+    <button class="quiz-opt" onclick="selectAnswer(${i})">
+      <span class="opt-badge">${letters[i]}</span>
+      <span>${opt}</span>
+    </button>
+  `).join('');
+}
+
+async function selectAnswer(chosen) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const q = quizQuestions[quizCurrent];
+
+  let correct, answer, explanation;
+
+  // Try server-side check
+  const res = await apiFetch(`/quiz/check?id=${q.id}&chosen=${chosen}`);
+  if (res) {
+    correct = res.correct; answer = res.answer; explanation = res.explanation;
+  } else {
+    correct = chosen === q.answer; answer = q.answer; explanation = q.explanation;
+  }
+
+  if (correct) quizScore++;
+
+  document.querySelectorAll('.quiz-opt').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === answer) btn.classList.add('correct');
+    else if (i === chosen && !correct) btn.classList.add('wrong');
+    const badge = btn.querySelector('.opt-badge');
+    if (i === answer) badge.textContent = '✓';
+    else if (i === chosen && !correct) badge.textContent = '✗';
+  });
+
+  const explain = document.getElementById('quiz-explain');
+  explain.textContent = explanation;
+  explain.classList.add('show');
+
+  const next = document.getElementById('quiz-next');
+  next.classList.add('show');
+  next.textContent = quizCurrent < quizQuestions.length - 1 ? 'Next Question →' : 'See My Score →';
+  next.onclick = nextQuestion;
+}
+
+function nextQuestion() {
+  quizCurrent++;
+  if (quizCurrent >= quizQuestions.length) showQuizResult();
+  else renderQuizQ();
+}
+
+function showQuizResult() {
+  document.getElementById('quiz-active').style.display = 'none';
+  const result = document.getElementById('quiz-result');
+  result.classList.add('show');
+
+  const total = quizQuestions.length;
+  const pct = quizScore / total;
+  document.getElementById('result-score').textContent = quizScore;
+  document.getElementById('result-total').textContent = total;
+
+  const msgs = [
+    "Keep learning — every investor starts somewhere.",
+    "A solid foundation! Review the concepts and try again.",
+    "Good grasp of the fundamentals!",
+    "Impressive — you understand mutual funds well.",
+    "Exceptional! You're ready for advanced concepts.",
+  ];
+  document.getElementById('result-msg').textContent = msgs[Math.min(Math.floor(pct * 5), 4)];
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Set initial label values
+  document.getElementById('sip-amt-lbl').textContent = fmt(5000);
+  document.getElementById('ls-amt-lbl').textContent = fmt(100000);
+  document.getElementById('goal-target-lbl').textContent = fmt(5000000);
+
+  checkServer();
+});
+</script>
+</body>
+</html>
